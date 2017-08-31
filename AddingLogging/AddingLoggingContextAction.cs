@@ -4,6 +4,7 @@ using JetBrains.Application.Progress;
 using JetBrains.ProjectModel;
 using JetBrains.ReSharper.Feature.Services.ContextActions;
 using JetBrains.ReSharper.Feature.Services.CSharp.Analyses.Bulbs;
+using JetBrains.ReSharper.Psi.CodeStyle;
 using JetBrains.ReSharper.Psi.CSharp;
 using JetBrains.ReSharper.Psi.CSharp.Tree;
 using JetBrains.ReSharper.Psi.CSharp.Util;
@@ -93,7 +94,7 @@ namespace AddingLogging
             {
                 foreach (IMultipleFieldDeclaration field_declaration in class_body.FieldDeclarations)
                 {
-                    if (field_declaration?.Attributes?.Attributes == null) break;
+                    if (field_declaration?.Attributes?.Attributes == null) continue;
                     foreach (IAttribute attributes_attribute in field_declaration.Attributes.Attributes)
                     {
                         if (attributes_attribute.Name.GetText() == "AddingLoggingTag")
@@ -153,18 +154,29 @@ namespace AddingLogging
                 {
                     case IReturnStatement return_statement:
                     {
-                        String local_return_s = return_code_s + (return_statement.Value != null ? $"{method_declaration.DeclaredElement?.ReturnType}: {{{return_statement.Value.GetText()}}}\");" : "void\");");
+                        //обработка return
+                        String local_return_s = return_code_s + (return_statement.Value != null ? $"{return_statement.Value.GetText()}={{{return_statement.Value.GetText()}}}\");" : "void\");");
                         ICSharpStatement statement = c_sharp_element_factory.CreateStatement(format: local_return_s);
                         ICSharpStatement previous_statement = return_statement.GetPreviousStatement();
                         if (previous_statement?.GetText().StartsWith(value: "Log.") != true)
                         {
-                            block.AddStatementBefore(statement: statement, anchor: return_statement);
+                            if (return_statement.Parent is IIfStatement if_statement)
+                            {
+                                IBlock new_block = c_sharp_element_factory.CreateBlock(format: $"{{{local_return_s}}}");
+                                new_block.AddStatementAfter(statement: return_statement, anchor: new_block.Statements.First());
+                                if_statement.Then.ReplaceWithBlock(blockToInsert: new_block);
+                            }
+                            else
+                            {
+                                block.AddStatementBefore(statement: statement, anchor: return_statement);
+                            }
                         }
                     }
                         break;
 
                     case ITryStatement try_statement:
                     {
+                        //обработка блока try
                         foreach (ICatchClause catch_clause in try_statement.CatchesEnumerable)
                         {
                             if (catch_clause is ISpecificCatchClause specific_catch_clause)
@@ -191,6 +203,7 @@ namespace AddingLogging
 
                     case IThrowStatement throw_statement:
                     {
+                        //обработка выброса ошибки
                         if (throw_statement.Exception is IObjectCreationExpression creation_expression)
                         {
                             String local_throw_s = throw_code_s + $"{creation_expression.TypeName.QualifiedName})}}.";
@@ -202,10 +215,16 @@ namespace AddingLogging
                                     {
                                         local_throw_s += $" {literal_expression.GetText().Replace(oldValue: "\"", newValue: default)}.";
                                     }
-                                    //if (c_sharp_argument.Value.NodeType.Index == 2178 && c_sharp_argument.Value is IReferenceExpression reference_expression)
-                                    //{
-
-                                    //}
+                                    if (c_sharp_argument.Value is IObjectCreationExpression object_creation_expression)
+                                    {
+                                        foreach (ICSharpArgument sharp_argument in object_creation_expression.Arguments)
+                                        {
+                                            if (sharp_argument.Value.NodeType.Index == 2029 && sharp_argument.Value is ICSharpLiteralExpression c_sharp_literal_expression)
+                                            {
+                                                local_throw_s += $" {c_sharp_literal_expression.GetText().Replace(oldValue: "\"", newValue: default)}.";
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             local_throw_s += "\");";
