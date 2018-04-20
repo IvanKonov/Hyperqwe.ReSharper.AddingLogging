@@ -99,7 +99,7 @@ namespace AddingLogging
                     {
                         if (attributes_attribute.Name.GetText() == "AddingLoggingTag")
                         {
-                            if (String.IsNullOrWhiteSpace(value: tag_string)) tag_string = "<";
+                            if (String.IsNullOrWhiteSpace(value: tag_string)) tag_string = "{{";
                             foreach (IMultipleDeclarationMember multiple_declaration_member in field_declaration.Declarators)
                             {
                                 tag_string += $"{{{multiple_declaration_member.DeclaredElement?.ShortName}}};";
@@ -112,7 +112,7 @@ namespace AddingLogging
             if (!String.IsNullOrWhiteSpace(value: tag_string))
             {
                 tag_string = tag_string.TrimEnd(';');
-                tag_string += "> ";
+                tag_string += "}} ";
             }
 
             CSharpElementFactory c_sharp_element_factory = CSharpElementFactory.GetInstance(element: method_declaration);

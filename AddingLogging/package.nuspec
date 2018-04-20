@@ -2,14 +2,14 @@
 <package>
 	<metadata>
 		<id>Hyperqwe.ReSharper.AddingLogging</id>
-		<version>1.0.5</version>
+		<version>1.0.9</version>
 		<authors>Ivan Konovalov</authors>
 		<owners>Ivan Konovalov</owners>
 		<requireLicenseAcceptance>false</requireLicenseAcceptance>
 		<description>TextDesc</description>
 		<tags>log logging</tags>
 		<dependencies>
-			<dependency id="Wave" version="[9.0]" />
+			<dependency id="Wave" version="11.0" />
 		</dependencies>
 	</metadata>
 	<files>
